@@ -61,7 +61,8 @@ public class Visualizer extends JPanel {
             new Vec3(-185, 100),    // Hi Hat
             new Vec3(-150, 170),    // Crash
             new Vec3(100, 130),     // Ride
-            new Vec3(180, 140),     // Crash 2
+            new Vec3(180, 140),     // Crash 2 (?)
+            new Vec3(-10, -30)      // Kick
     };
 
     final int SNARE     = 1;
@@ -71,62 +72,58 @@ public class Visualizer extends JPanel {
     final int HI_HAT    = 5;
     final int CRASH     = 6;
     final int RIDE      = 7;
-    final int CRASH_2   = 8;
+    final int CRASH_2   = 8;    // might be unused
+    final int KICK      = 9;
+
+    private Graphics2D g;
 
     @Override
-    protected void paintComponent(Graphics g) {
-        super.paintComponent(g);
+    protected void paintComponent(Graphics G) {
+        super.paintComponent(G);
+        this.g = (Graphics2D) G;
 
-        Graphics2D g2 = (Graphics2D) g;
-        g2.setStroke(new BasicStroke(1));
+        g.setStroke(new BasicStroke(1));
 
         if (drumKitImage != null) {
-            g2.drawImage(drumKitImage, DRUM_X, DRUM_Y, null);
+            g.drawImage(drumKitImage, DRUM_X, DRUM_Y, null);
         }
 
-        drawDebugInfo(g2, false, true);
-
-        // update if current hit is over
-        long runningMs = (System.currentTimeMillis() - lastHitStartTime);
-        if (runningMs >= from.hitLength) {
-            from = instructions[index];
-            index = (index + 1) % instructions.length;
-            lastHitStartTime = System.currentTimeMillis();
-            runningMs = 0;
-        }
-
-        // get stick head position
-        DrumHit next = instructions[index];
-        double t = runningMs / from.hitLength;
-        Vec3 head = VisMath.bounce(t, getPoint(from), getPoint(next));
-        Vec3 dir = new Vec3(WRIST1).sub(head).normal();
-
-        // draw stick
-        g2.setColor(new Color(0xA0A040));
-        g2.setStroke(new BasicStroke(5));
-
-        drawCircle(g2, head, 6);
-        drawRay(g2, head, dir, 60);
+        drawDebugInfo(true, true);
     }
 
-    int index = 0;
     long lastHitStartTime;
     final DrumHit[] instructions = new DrumHit[]{
-            new DrumHit(HI_HAT, 250),
-            new DrumHit(HI_HAT, 250),
-            new DrumHit(SNARE, 250),
-            new DrumHit(HI_HAT, 250),
+            new DrumHit(HI_HAT, 1000),
+            new DrumHit(KICK, 1000),
+            new DrumHit(HI_HAT, 1500),
+            new DrumHit(HI_HAT, 2000),
+            new DrumHit(SNARE, 2000),
+            new DrumHit(HI_HAT, 2500),
     };
-    DrumHit from = new DrumHit(0, 1000);
 
-    final Vec3 WRIST1 = new Vec3(-50, -40, 0);
-    final Vec3 WRIST2 = new Vec3(30, -40, 0);
+    final Vec3 WRIST_LEFT = new Vec3(-50, -40, 0);
+    final Vec3 WRIST_RIGHT = new Vec3(30, -40, 0);
 
-    private Vec3 getPoint(DrumHit d) {
-        return drumPoints[d.drumIndex];
+    private void drawImpact() {}
+
+    private void drawStick(Stick s) {
+        g.setColor(Stick.COLOR);
+
+        Vec3 head = VisMath.bounce(s.t, s.fromPt, s.toPt);
+        drawCircle(head, Stick.HEAD_RADIUS);
+
+        g.setStroke(new BasicStroke(Stick.WIDTH));
+        Vec3 dir = new Vec3(s.wrist).sub(head).normal();
+        Vec3 pt2 = head.rayTo(dir, Stick.LENGTH);
+        g.draw(new Line2D.Double(
+                CENTER_X + head.x,
+                CENTER_Y - head.y,
+                CENTER_X + pt2.x,
+                CENTER_Y - pt2.y
+        ));
     }
 
-    private void drawDebugInfo(Graphics2D g, boolean grid, boolean points) {
+    private void drawDebugInfo(boolean grid, boolean points) {
         // draw grid
         if (grid) {
             g.setColor(new Color(0x804080FF, true));
@@ -146,35 +143,25 @@ public class Visualizer extends JPanel {
         // draw points (debug)
          if (points) {
             g.setColor(Color.YELLOW);
-            for (int i = 0; i < drumPoints.length; i++)
-                drawCircle(g, drumPoints[i], 5);
+             for (Vec3 drumPoint : drumPoints)
+                 drawCircle(drumPoint, 5);
 
             g.setColor(Color.RED);
-            drawCircle(g, WRIST1, 5);
-            drawCircle(g, WRIST2, 5);
+            drawCircle(WRIST_LEFT, 5);
+            drawCircle(WRIST_RIGHT, 5);
 
             g.setColor(Color.BLACK);
-            drawCircle(g, new Vec3(), 8);
+            drawCircle(new Vec3(), 8);
          }
     }
 
-    private void drawCircle(Graphics g, Vec3 pt, int radius) {
+    private void drawCircle(Vec3 pt, int radius) {
         g.fillOval(
                 CENTER_X - radius + (int)pt.x,
                 CENTER_Y - radius - (int)pt.y,
                 radius * 2,
                 radius * 2
         );
-    }
-
-    private void drawRay(Graphics2D g, Vec3 pt, Vec3 dir, double len) {
-        Vec3 pt2 = pt.rayTo(dir, len);
-        g.draw(new Line2D.Double(
-                CENTER_X + pt.x,
-                CENTER_Y - pt.y,
-                CENTER_X + pt2.x,
-                CENTER_Y - pt2.y
-        ));
     }
 
     public static void main(String[] args) {
@@ -190,11 +177,24 @@ public class Visualizer extends JPanel {
 }
 
 class DrumHit {
-    public int drumIndex;       // references drumPoints, will be changed later
-    public double hitLength;    // in ms until next hit
+    public int drumIndex;   // references drumPoints
+    public long startTick;  // in ms until next hit
 
-    public DrumHit(int drumIndex, double hitLength) {
+    public DrumHit(int drumIndex, long startTick) {
         this.drumIndex = drumIndex;
-        this.hitLength = hitLength;
+        this.startTick = startTick;
     }
+}
+
+class Stick {
+
+    final static Color COLOR = new Color(0xDE_B8_87);
+    final static int WIDTH = 5;
+    final static int LENGTH = 50;
+    final static int HEAD_RADIUS = 6;
+
+    public Vec3 wrist;
+    public double t;        // time in animation (0, 1)
+    public Vec3 fromPt;
+    public Vec3 toPt;
 }
