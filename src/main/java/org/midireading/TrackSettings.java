@@ -36,7 +36,7 @@ public class TrackSettings {
     private String name;                // Name of current track
     private String instrument;          // Name of current instrument
     private int channel;                // Messages between updates are in this channel
-    private long nanosPerTick;        // Used for timings
+    private long nanosPerTick = 1;      // Used for timings
     private int bpm;                    // Mostly for display
     private LocalTime offset = LocalTime.now();     // idk how to use this one
     private int timeSigNum;             // Number of Nth-notes in a bar (6 in 6/8)
@@ -121,6 +121,13 @@ public class TrackSettings {
         Thread.sleep(nanos / 1_000_000L, (int)(nanos % 1_000_000L));
     }
 
+    // Returns the amount of ticks given the current nanosecond
+    public long nanosToTick(long nanos) {
+        return nanos / nanosPerTick;
+    }
+
+    /*=============== Accessor Methods ===============*/
+
     public String getName() {
         return name;
     }
@@ -135,10 +142,6 @@ public class TrackSettings {
 
     public int getBpm() {
         return bpm;
-    }
-
-    public long getNanosPerTick() {
-        return nanosPerTick;
     }
 
     public LocalTime getOffset() {

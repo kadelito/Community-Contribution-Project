@@ -49,8 +49,15 @@ public class Visualizer extends JPanel {
         Timer timer = new Timer(REFRESH_RATE ,taskPerformer);
         timer.start();
 
-        lastHitStartTime = System.currentTimeMillis();
+        programStart = System.currentTimeMillis();
+        setup();
     }
+
+    public void setup() {
+
+    }
+
+    long programStart;
 
     private final Vec3[] drumPoints = new Vec3[]{
             new Vec3(),             // Origin (0, 0)
@@ -72,9 +79,43 @@ public class Visualizer extends JPanel {
     final int HI_HAT    = 5;
     final int CRASH     = 6;
     final int RIDE      = 7;
-    final int CRASH_2   = 8;    // might be unused
+    final int CRASH_2   = 8;    // might end up unused
     final int KICK      = 9;
 
+    final Vec3 WRIST_LEFT = new Vec3(-50, -40, 0);
+    final Vec3 WRIST_RIGHT = new Vec3(30, -40, 0);
+
+    int songIndex = 0;
+    final DrumHit[] song = new DrumHit[]{
+            new DrumHit(HI_HAT, 0),
+            new DrumHit(KICK, 0),
+            new DrumHit(HI_HAT, 500),
+            new DrumHit(HI_HAT, 1000),
+            new DrumHit(SNARE, 1000),
+            new DrumHit(HI_HAT, 1500),
+            new DrumHit(HI_HAT, 2000),
+            new DrumHit(KICK, 2000),
+            new DrumHit(HI_HAT, 2500),
+            new DrumHit(HI_HAT, 3000),
+            new DrumHit(SNARE, 3000),
+            new DrumHit(HI_HAT, 3500),
+            new DrumHit(HI_HAT, 4000),
+            new DrumHit(KICK, 4000),
+            new DrumHit(HI_HAT, 4500),
+            new DrumHit(HI_HAT, 5000),
+            new DrumHit(SNARE, 5000),
+            new DrumHit(HI_HAT, 5500),
+            new DrumHit(HI_HAT, 6000),
+            new DrumHit(KICK, 6000),
+            new DrumHit(HI_HAT, 6500),
+            new DrumHit(SNARE, 7000),
+            new DrumHit(SNARE, 7250),
+            new DrumHit(SNARE, 7500),
+            new DrumHit(SNARE, 7750),
+            new DrumHit(CRASH, 8000),
+            new DrumHit(KICK, 8000)
+    };
+    HitEffect[] effects = new HitEffect[10];
     private Graphics2D g;
 
     @Override
@@ -88,28 +129,58 @@ public class Visualizer extends JPanel {
             g.drawImage(drumKitImage, DRUM_X, DRUM_Y, null);
         }
 
-        drawDebugInfo(true, true);
+        drawDebugInfo(true, false);
+
+        // End song 2 seconds after song is done
+        if (getSongMs() > song[song.length - 1].startTick + 2000)
+            System.exit(0);
+
+        while (songIndex < song.length && getSongMs() >= song[songIndex].startTick) {
+            addHitEffect(song[songIndex].getPoint());
+            songIndex++;
+        }
+        updateHitEffects();
     }
 
-    long lastHitStartTime;
-    final DrumHit[] instructions = new DrumHit[]{
-            new DrumHit(HI_HAT, 1000),
-            new DrumHit(KICK, 1000),
-            new DrumHit(HI_HAT, 1500),
-            new DrumHit(HI_HAT, 2000),
-            new DrumHit(SNARE, 2000),
-            new DrumHit(HI_HAT, 2500),
-    };
+    // Adds a hit effect in the first empty spot, if any
+    public void addHitEffect(Vec3 loc) {
+        for (int i = 0; i < effects.length; i++) {
+            if (effects[i] == null) {
+                effects[i] = new HitEffect(loc, getSongMs(), 500);
+                break;
+            }
+        }
+    }
 
-    final Vec3 WRIST_LEFT = new Vec3(-50, -40, 0);
-    final Vec3 WRIST_RIGHT = new Vec3(30, -40, 0);
+    // Draws effects and sets completed effects to 0
+    public void updateHitEffects() {
+        for (int i = 0; i < effects.length; i++) {
+            HitEffect fx = effects[i];
+            if (fx != null) {
+                drawHitEffect(fx);
+                if (getSongMs() >= fx.startTick + fx.tickLength)
+                    effects[i] = null;
+            }
+        }
+    }
 
-    private void drawImpact() {}
+    // Draws a HitEffect object
+    public void drawHitEffect(HitEffect fx) {
+        double t = (double) (getSongMs() - fx.startTick) / fx.tickLength;
+        t = clamp(t, 0, 1);
+        g.setColor(new Color(fx.color.getRed(), fx.color.getGreen(), fx.color.getBlue(), (int)((1 - t) * 255)));
+        drawCircle(fx.loc, (int)(t * 50));
+    }
 
+    // Draws a Stick object
     private void drawStick(Stick s) {
         g.setColor(Stick.COLOR);
 
-        Vec3 head = VisMath.bounce(s.t, s.fromPt, s.toPt);
+        s.t = (double) getSongMs() / (s.destPt.startTick - s.fromPt.startTick);
+        Vec3 from = s.fromPt.getPoint();
+        Vec3 dest = s.destPt.getPoint();
+
+        Vec3 head = VisMath.bounce(s.t, from, dest);
         drawCircle(head, Stick.HEAD_RADIUS);
 
         g.setStroke(new BasicStroke(Stick.WIDTH));
@@ -123,6 +194,7 @@ public class Visualizer extends JPanel {
         ));
     }
 
+    // Can draw a grid and point data on screen for debugging / development
     private void drawDebugInfo(boolean grid, boolean points) {
         // draw grid
         if (grid) {
@@ -155,6 +227,7 @@ public class Visualizer extends JPanel {
          }
     }
 
+    // Draws a circle at the position vector pt with given radius
     private void drawCircle(Vec3 pt, int radius) {
         g.fillOval(
                 CENTER_X - radius + (int)pt.x,
@@ -162,6 +235,16 @@ public class Visualizer extends JPanel {
                 radius * 2,
                 radius * 2
         );
+    }
+
+    // Returns min or max if x is below or above range, otherwise x
+    private double clamp(double x, double min, double max) {
+        return Math.min(Math.max(min, x), max);
+    }
+
+    // Returns the current progress in the song in milliseconds
+    private long getSongMs() {
+        return System.currentTimeMillis() - programStart;
     }
 
     public static void main(String[] args) {
@@ -174,27 +257,53 @@ public class Visualizer extends JPanel {
             frame.setVisible(true);
         });
     }
-}
 
-class DrumHit {
-    public int drumIndex;   // references drumPoints
-    public long startTick;  // in ms until next hit
 
-    public DrumHit(int drumIndex, long startTick) {
-        this.drumIndex = drumIndex;
-        this.startTick = startTick;
+
+    class DrumHit {
+        public int drumIndex;   // references drumPoints
+        public long startTick;  // in ms until next hit
+
+        public DrumHit(int drumIndex, long startTick) {
+            this.drumIndex = drumIndex;
+            this.startTick = startTick;
+        }
+
+        public Vec3 getPoint() {
+            return drumPoints[drumIndex];
+        }
     }
-}
 
-class Stick {
+    class Stick {
 
-    final static Color COLOR = new Color(0xDE_B8_87);
-    final static int WIDTH = 5;
-    final static int LENGTH = 50;
-    final static int HEAD_RADIUS = 6;
+        final static Color COLOR = new Color(0xDE_B8_87);
+        final static int WIDTH = 5;
+        final static int LENGTH = 50;
+        final static int HEAD_RADIUS = 6;
 
-    public Vec3 wrist;
-    public double t;        // time in animation (0, 1)
-    public Vec3 fromPt;
-    public Vec3 toPt;
+        public Vec3 wrist;
+        double t = 0;
+        public DrumHit fromPt;
+        public DrumHit destPt;
+
+        public Stick(Vec3 wrist, DrumHit fromPt, DrumHit toPt) {
+            this.wrist = wrist;
+            this.fromPt = fromPt;
+            this.destPt = toPt;
+        }
+    }
+
+    class HitEffect {
+        public Color color;
+        public Vec3 loc;
+        public long startTick;
+        public long tickLength;
+
+        public HitEffect(Vec3 loc, long startTick, long tickLength) {
+            this.loc = loc;
+            this.startTick = startTick;
+            this.tickLength = tickLength;
+            this.color = new Color(0f, 1f, 1f);
+        }
+    }
 }

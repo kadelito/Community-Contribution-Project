@@ -9,8 +9,11 @@ import java.io.File;
 import static javax.sound.midi.ShortMessage.*;
 
 public class MusicHandler {
+    
+    private static long songStartNanos;
 
      /**
+      * <pre>
       * pseudocode for music (i think)
       * song start = current time
       * while song not over {
@@ -24,6 +27,7 @@ public class MusicHandler {
       *     }
       *     wait until next closest event (in ticks)
       * }
+      * </pre
       */
     public static void main(String[] args) throws Exception {
         // Set up synthesizer
@@ -33,7 +37,7 @@ public class MusicHandler {
         MidiChannel[] channels = synth.getChannels();
 
         // Set up midi file
-        Sequence sequence = MidiSystem.getSequence(new File("src/main/resources/SweetChildOfMine.mid"));
+        Sequence sequence = MidiSystem.getSequence(new File("src/main/resources/Numb.mid"));
         MIDIFormatter formatter = MIDIFormatter.getInstance();
         formatter.setupFormatter(sequence);
 
@@ -45,63 +49,71 @@ public class MusicHandler {
         long curTick = 0;
         long nextTick = 0;
 
+        songStartNanos = System.nanoTime();
+
         while (curTick < sequence.getTickLength()) {
 
-            // Iterate through tracks
-//            System.out.println("t = " + curTick);
-            for (int i = 0; i < sequence.getTracks().length; i++) {
-                Track track = sequence.getTracks()[i];
-//                System.out.println("Track " + i);
+            // Wait until next tick
+            if (trackSettings[0].nanosToTick(getSongNanos()) > nextTick) {
+                nextTick = Long.MAX_VALUE;
+                
+                // Iterate through tracks
+                for (int i = 0; i < sequence.getTracks().length; i++) {
+                    Track track = sequence.getTracks()[i];
 
-                TrackSettings curSettings = trackSettings[i];
-                formatter.setTrackSettings(curSettings);
+                    TrackSettings curSettings = trackSettings[i];
+                    formatter.setTrackSettings(curSettings);
 
-                // Play each event at curTick in parallel
-                for (int j = 0; j < track.size(); j++) {
-                    MidiEvent event = track.get(j);
+                    // Play each event at curTick in parallel
+                    for (int j = 0; j < track.size(); j++) {
+                        MidiEvent event = track.get(j);
 
-                    // TODO: replace this with an array of indices for each track
-                    if (event.getTick() < curTick) continue;
+                        // TODO: replace 'wasted loops' with an array of indices(progress) for each track
+                        if (event.getTick() < curTick) continue;
 
-                    // Get the next nearest tick
-                    else if (event.getTick() > curTick) {
-                        nextTick = Math.min(nextTick, event.getTick());
-                        break;
-                    }
-                    // Otherwise, it's the current tick
-
-                    MidiMessage message = event.getMessage();
-                    curSettings.update(message);
-                    MidiChannel curChannel = channels[curSettings.getChannel()];
-                    curChannel.programChange(curSettings.getProgramNumber());
-                    curChannel.setPitchBend(curSettings.getPitchBend());
-
-//                    if (message instanceof MetaMessage meta)
-//                        System.out.println(formatter.showSetting(meta));
-
-                    if (message instanceof ShortMessage sMessage) {
-                        switch (sMessage.getCommand()) {
-                            case NOTE_ON:
-                                curChannel.noteOn(sMessage.getData1(), sMessage.getData2());
-                                break;
-
-                            case NOTE_OFF:
-                                curChannel.noteOff(sMessage.getData1(), sMessage.getData2());
-                                break;
+                            // Get the next nearest tick
+                        else if (event.getTick() > curTick) {
+                            nextTick = Math.min(nextTick, event.getTick());
+                            break;
                         }
+                        // Otherwise, it's the current tick
+                        
+                        processMidiEvent(event, curSettings, channels);
                     }
                 }
             }
-            // After all tracks done, update ticks & wait
-            trackSettings[0].sleep(nextTick - curTick);
-            // In the final program, it would be more like
-            // if (nanosToTicks(System.nanotime()) > nextTick)
-            //    do the next ticks
-
+            
+            // After all tracks done, update tick
             curTick = nextTick;
-            nextTick = Long.MAX_VALUE;
-
         }
+        
+        // Prevent final note(s) from cutting off
+        Thread.sleep(1000);
+    }
+    
+    public static void processMidiEvent(MidiEvent event, TrackSettings curSettings, MidiChannel[] channels) {
 
+        MidiMessage message = event.getMessage();
+        curSettings.update(message);
+        MidiChannel curChannel = channels[curSettings.getChannel()];
+        curChannel.programChange(curSettings.getProgramNumber());
+        curChannel.setPitchBend(curSettings.getPitchBend());
+
+        if (message instanceof ShortMessage sMessage) {
+            switch (sMessage.getCommand()) {
+                case NOTE_ON:
+                    curChannel.noteOn(sMessage.getData1(), sMessage.getData2());
+                    break;
+
+                case NOTE_OFF:
+                    curChannel.noteOff(sMessage.getData1(), sMessage.getData2());
+                    break;
+            }
+        }
+        
+    }
+    
+    public static long getSongNanos() {
+        return System.nanoTime() - songStartNanos;
     }
 }
