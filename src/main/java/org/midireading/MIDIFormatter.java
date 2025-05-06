@@ -37,9 +37,11 @@ public class MIDIFormatter {
                     // velocity
                     sb.append(" force: ").append(shortMsg.getData2());
             } else {
-                sb.append(shortMessageNames.get(shortMsg.getCommand()));
+                sb.append(shortMessageNames.get(shortMsg.getCommand())).append(": ");
                 if (shortMsg.getCommand() == PROGRAM_CHANGE)
-                    sb.append(": ").append(getInstrument(settings.getProgramNumber()));
+                    sb.append(getInstrument(shortMsg.getData1()));
+                else
+                    sb.append(String.format("(%02X, %02X)", shortMsg.getData1(), shortMsg.getData2()));
             }
 
         // otherwise, it's a system-exclusive or meta-event
@@ -125,8 +127,8 @@ public class MIDIFormatter {
     }
 
     // Converts a tempo (in microseconds per quarter-note) into nanoseconds per midi tick
-    public long tempoToNanosPerTick(int microseconds) {
-        double real = microseconds * NANOSECOND_PER_MICROSECOND / ticksPerQuarterNote;
+    public long tempoToNanosPerTick(int microsPerQuarter) {
+        double real = microsPerQuarter / ticksPerQuarterNote * 1000L;
         return (long) real;
     }
 
@@ -206,7 +208,6 @@ public class MIDIFormatter {
     private static final double ERROR_THRESHOLD = 1e-4;
 
     private static final double MINUTE_PER_MICROSECOND = 6e7;
-    private static final double NANOSECOND_PER_MICROSECOND = 1e3;
 
     private static final HashMap<Integer, String> metaEventNames = new HashMap<>(15);
     private static final HashMap<Integer, String> shortMessageNames = new HashMap<>(15);

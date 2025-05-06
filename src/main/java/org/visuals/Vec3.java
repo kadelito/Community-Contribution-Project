@@ -77,4 +77,8 @@ public class Vec3 {
 
         return v.scale(Math.sqrt(sqrMag));
     }
+
+    public static Vec3 random(double len) {
+        return random().scale(len);
+    }
 }

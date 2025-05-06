@@ -9,7 +9,7 @@ import static javax.sound.midi.ShortMessage.*;
 
 public class TrackSettings {
 
-    static class metaTypes {
+    public static class metaTypes {
         public static final int SEQUENCE_NUMBER = 0x00;
 
         // Text events: FF 01 -> 0F
@@ -45,29 +45,17 @@ public class TrackSettings {
     private boolean majorKey;           // false -> minor key
 
     /*              SHORT MESSAGE DATA            */
-    private int programNumber;
-    private int pitchBend;
 
-    // General update method for any MidiMessage
-    public void update(MidiMessage message) {
-        if (message instanceof ShortMessage sh)
-            updateShortData(sh);
-        else if (message instanceof MetaMessage mt)
-            updateMetaData(mt);
+    public long getNanosPerTick() {
+        return nanosPerTick;
     }
 
-    // Updates data given a ShortMessage
-    public void updateShortData(ShortMessage mess) {
-        channel = mess.getChannel();
-        switch (mess.getCommand()) {
-            case CONTROL_CHANGE:
-                programNumber = mess.getData1();
-                break;
-
-            case PITCH_BEND:
-                pitchBend = mess.getData1() + (mess.getData2() << 7);
-                break;
-        }
+    // General update method for a MidiMessage
+    public void update(MidiMessage message) {
+        if (message instanceof MetaMessage mt)
+            updateMetaData(mt);
+        else if (message instanceof ShortMessage sm)
+            channel = sm.getChannel();
     }
 
     // Updates data given a MetaMessage
@@ -116,14 +104,15 @@ public class TrackSettings {
     }
 
     // Sleeps for a given amount of midi ticks based on timing settings
+    // Mainly for development purposes, final version should not use this
     public void sleep(long ticks) throws InterruptedException {
         long nanos = nanosPerTick * ticks;
         Thread.sleep(nanos / 1_000_000L, (int)(nanos % 1_000_000L));
     }
 
-    // Returns the amount of ticks given the current nanosecond
-    public long nanosToTick(long nanos) {
-        return nanos / nanosPerTick;
+    // Converts ticks into nanoseconds
+    public long tickToNanos(long tick) {
+        return tick * nanosPerTick;
     }
 
     /*=============== Accessor Methods ===============*/
@@ -161,13 +150,5 @@ public class TrackSettings {
                 keyNote == 0 ? "C" : Math.abs(keyNote) + (
                         keyNote > 0 ? " sharps" : " flats")
         ) + (majorKey ? " (Major)" : " (Minor)");
-    }
-
-    public int getProgramNumber() {
-        return programNumber;
-    }
-
-    public int getPitchBend() {
-        return pitchBend;
     }
 }

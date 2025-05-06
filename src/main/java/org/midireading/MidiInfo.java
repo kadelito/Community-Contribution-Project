@@ -3,13 +3,11 @@ package org.midireading;
 import javax.sound.midi.*;
 import java.io.File;
 
-import static org.midireading.TrackSettings.metaTypes.*;
-
-public class Main {
+public class MidiInfo {
 
     public static void main(String[] args) throws Exception {
 
-        Sequence sequence = MidiSystem.getSequence(new File("src/main/resources/1979.mid"));
+        Sequence sequence = MidiSystem.getSequence(new File("src/main/resources/AmericanIdiot.mid"));
         MIDIFormatter formatter = MIDIFormatter.getInstance();
         formatter.setupFormatter(sequence);
 
@@ -32,14 +30,14 @@ public class Main {
         TrackSettings settings = new TrackSettings();
         formatter.setTrackSettings(settings);
 
+        long prevTick = 0;
+
         // Iterate through tracks
         for (int i = 0; i < sequence.getTracks().length; i++) {
             Track track = sequence.getTracks()[i];
             System.out.println("=====================================================");
             System.out.println("Track " + i + ": size = " + track.size());
             System.out.printf("Track %d ( events: %d,\tlength: %d ticks )\n", i, track.size(), track.ticks());
-
-            long prevTick = 0;
 
             System.out.printf("t = %" + tickDigits + "d |\tTrack start\n", 0);
 
@@ -49,20 +47,19 @@ public class Main {
                 MidiMessage message = event.getMessage();
 
                 settings.update(message);
-                long deltaTick = event.getTick() - prevTick;
-//                if (deltaTick > 0)
-//                    System.out.printf("t = %" + tickDigits + "d |\t", event.getTick());
-//                else
-//                    System.out.print(centerString(5 + tickDigits, "...") + "|\t");
-//                System.out.println(formatter.formatMidiMessage(message));
 
+                if (message instanceof ShortMessage && settings.getChannel() != 6)
+                    continue;
 
-//                settings.sleep(deltaTick);`
+                if (event.getTick() > prevTick)
+                    System.out.printf("t = %" + tickDigits + "d |\t", event.getTick());
+                else
+                    System.out.print(centerString(5 + tickDigits, "...") + "|\t");
+
+                System.out.println(formatter.formatMidiMessage(message));
 
                 prevTick = event.getTick();
             }
-            System.out.println("-------------------------------");
-            System.out.println(settings.getChannel());
             System.out.println("=====================================================\n");
         }
     }
