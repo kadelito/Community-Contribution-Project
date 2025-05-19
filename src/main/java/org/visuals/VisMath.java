@@ -2,7 +2,7 @@ package org.visuals;
 
 public class VisMath {
 
-    private static final double BOUNCE = 50.0;
+    private static final double BOUNCE = 200.0;
 
     public static Vec3 bounce(double t, Vec3 p1, Vec3 p2) {
         Vec3 linePoint = lerp(clamp(t), p1, p2);

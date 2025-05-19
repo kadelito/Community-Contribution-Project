@@ -39,7 +39,7 @@ public class Visualizer extends JPanel {
 
     private final double SLOW_FACTOR = 1;
 
-    private final String songPathname = "src/main/resources/AmericanIdiot.mid";
+    private final String songPathname = "src/main/resources/Numb.mid";
 
     Map<DrumPart, Vec3> drumPoints;
     static final Vec3 WRIST_LEFT = new Vec3(-50, -40);
@@ -301,10 +301,10 @@ public class Visualizer extends JPanel {
         }
 
         // Draw both sticks
-//        updateStick(leftStick);
-//        drawStick(leftStick);
-//        updateStick(rightStick);
-//        drawStick(rightStick);
+        updateStick(leftStick);
+        drawStick(leftStick);
+        updateStick(rightStick);
+        drawStick(rightStick);
         // commented out bc not work :(
 
         updateHitEffects();
@@ -381,11 +381,10 @@ public class Visualizer extends JPanel {
 
     // Updates a Stick object
     private void updateStick (Stick s) {
-        DrumHit destHit = s.hits[s.index - 1];
-        DrumHit fromHit = s.hits[s.index];
+        DrumHit fromHit = s.hits[s.index - 1];
+        DrumHit destHit = s.hits[s.index];
         s.t = (double)(getSongNanos() - fromHit.startTimeNanos) / (destHit.startTimeNanos - fromHit.startTimeNanos);
-        assert 0 <= s.t && s.t <= 1;
-        if (getSongNanos() > destHit.startTimeNanos) s.index++;
+        if (s.t >= 1 && s.index < s.hits.length - 1) s.index++;
     }
 
     // Draws a Stick object
