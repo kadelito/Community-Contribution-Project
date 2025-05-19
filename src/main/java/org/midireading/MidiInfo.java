@@ -7,7 +7,7 @@ public class MidiInfo {
 
     public static void main(String[] args) throws Exception {
 
-        Sequence sequence = MidiSystem.getSequence(new File("src/main/resources/AmericanIdiot.mid"));
+        Sequence sequence = MidiSystem.getSequence(new File("src/main/resources/Numb.mid"));
         MIDIFormatter formatter = MIDIFormatter.getInstance();
         formatter.setupFormatter(sequence);
 
@@ -48,7 +48,7 @@ public class MidiInfo {
 
                 settings.update(message);
 
-                if (message instanceof ShortMessage && settings.getChannel() != 6)
+                if (message instanceof ShortMessage s && s.getChannel() != 9)
                     continue;
 
                 if (event.getTick() > prevTick)

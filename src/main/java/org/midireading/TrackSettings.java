@@ -5,8 +5,6 @@ import javax.sound.midi.MidiMessage;
 import javax.sound.midi.ShortMessage;
 import java.time.LocalTime;
 
-import static javax.sound.midi.ShortMessage.*;
-
 public class TrackSettings {
 
     public static class metaTypes {
@@ -43,12 +41,6 @@ public class TrackSettings {
     private int timeSigType;            // Type of notes in a bar (8 in 6/8)
     private int keyNote;                // Ranges from 7 flats to 7 sharps around C major
     private boolean majorKey;           // false -> minor key
-
-    /*              SHORT MESSAGE DATA            */
-
-    public long getNanosPerTick() {
-        return nanosPerTick;
-    }
 
     // General update method for a MidiMessage
     public void update(MidiMessage message) {

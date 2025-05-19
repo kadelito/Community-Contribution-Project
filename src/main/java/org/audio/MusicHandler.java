@@ -9,21 +9,38 @@ import java.io.File;
 import static javax.sound.midi.ShortMessage.*;
 
 public class MusicHandler {
-    
-    private static long songStartNanos;
 
-    private Sequence sequence;
-    private MidiChannel[] channels;
-    private MIDIFormatter formatter;
-    private TrackSettings[] trackSettings;
-    private int[] trackProgress;
+    private double slowFactor;
+
+    private final Sequence sequence;
+    private final MidiChannel[] channels;
+    private final MIDIFormatter formatter;
+    private final TrackSettings[] trackSettings;
+    private final int[] trackProgress;
 
     private TrackSettings curSettings;
     private long curTick = 0;
     private long nextNearestTick = Long.MAX_VALUE;
     private long nextNanos = 0;
 
-    public MusicHandler(String pathname) throws Exception {
+    int metronome = 0;
+    long nextBeatNanos = 0;
+    long deltaBeatNanos;
+    private static long songStartNanos;
+
+    public static void main(String[] args) throws Exception {
+        MusicHandler music = new MusicHandler("src/main/resources/BasketCase.mid");
+        while (true) {
+            music.loop();
+            Thread.sleep(20);
+            music.endIfOver();
+        }
+    }
+
+    public MusicHandler(String pathname) throws Exception {this(pathname, 1.0);}
+    public MusicHandler(String pathname, double slowFactor) throws Exception {
+
+        this.slowFactor = slowFactor;
 
         // Set up midi file
         sequence = MidiSystem.getSequence(new File(pathname));
@@ -46,20 +63,11 @@ public class MusicHandler {
         songStartNanos = System.nanoTime();
     }
 
-    public void run() throws Exception {
-
-        while (curTick < sequence.getTickLength()) {
-            // Don't advance until next tick
-            loop();
-        }
-        // Prevent final note(s) from cutting off
-        Thread.sleep(3000);
-    }
-
     public void loop() {
 
-        // Don't do anything until it's time
+        // Don't do anything until the next nanosecond
         if (getSongNanos() > nextNanos) {
+
             // Iterate through tracks
             for (int i = 0; i < sequence.getTracks().length; i++) {
                 Track track = sequence.getTracks()[i];
@@ -68,8 +76,7 @@ public class MusicHandler {
                 formatter.setTrackSettings(curSettings);
 
                 // Play each event at curTick in parallel
-
-                // Advance forward
+                // Advance forward until next event is on the next tick OR the end of track
                 for (int j = trackProgress[i]; j < track.size(); j++) {
                     MidiEvent event = track.get(j);
 
@@ -86,12 +93,35 @@ public class MusicHandler {
 
             // After all tracks done, update timings
             curTick = nextNearestTick;
-            nextNanos = trackSettings[0].tickToNanos(nextNearestTick);
+            nextNanos = (long) (slowFactor * trackSettings[0].tickToNanos(nextNearestTick));
+            deltaBeatNanos = (long) (slowFactor * trackSettings[0].tickToNanos(sequence.getResolution()));
 
             // Reset next tick to be 'infinitely' far away
             // (will be overwritten by first Math.min call)
             nextNearestTick = Long.MAX_VALUE;
         }
+
+        // Call metronome
+        if (getSongNanos() > nextBeatNanos) {
+            click();
+        }
+    }
+
+    public void click() {
+        channels[9].noteOff(76);
+        channels[9].noteOff(77);
+        channels[9].noteOn(metronome % 4 == 0 ? 76:77, 127);
+
+        nextBeatNanos += deltaBeatNanos;
+        metronome++;
+    }
+
+    public void endIfOver() {
+        long endTick = sequence.getTickLength();
+        long endNanos = trackSettings[0].tickToNanos(endTick);
+
+        if (getSongNanos() > endNanos + 2L * NANOS_PER_SEC)
+            System.exit(0);
     }
 
     // Processes a MidiEvent
@@ -104,11 +134,13 @@ public class MusicHandler {
 
         // If it's a ShortMessage, do that stuff
         if (message instanceof ShortMessage shortMessage) {
+            double velocityMult = shortMessage.getChannel() == 9 ?
+                    0.85 : 0.7;
             int data1 = shortMessage.getData1();
             int data2 = shortMessage.getData2();
             switch (shortMessage.getCommand()) {
                 case NOTE_ON:
-                    curChannel.noteOn(data1, data2);
+                    curChannel.noteOn(data1, (int)(data2 * velocityMult));
                     break;
 
                 case NOTE_OFF:
@@ -142,8 +174,5 @@ public class MusicHandler {
         return System.nanoTime() - songStartNanos;
     }
 
-    public static void main(String[] args) throws Exception {
-        MusicHandler music = new MusicHandler("src/main/resources/Numb.mid");
-        music.run();
-    }
+    private static final int NANOS_PER_SEC = 1_000_000_000;
 }

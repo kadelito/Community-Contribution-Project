@@ -121,8 +121,8 @@ public class MIDIFormatter {
     public static int tempoToBPM(int microseconds) {
         double real = MINUTE_PER_MICROSECOND / microseconds;
         int bpm = (int) Math.round(real);
-        if (Math.abs(real - bpm) > ERROR_THRESHOLD)
-            throw new RuntimeException("Non-integer BPM detected! (" + real + ")");
+//        if (Math.abs(real - bpm) > ERROR_THRESHOLD)
+//            throw new RuntimeException("Non-integer BPM detected! (" + real + ")");
         return bpm;
     }
 
@@ -152,6 +152,10 @@ public class MIDIFormatter {
         if (instance == null)
             instance = new MIDIFormatter();
         return instance;
+    }
+
+    public double getTicksPerQuarterNote() {
+        return ticksPerQuarterNote;
     }
 
     public void setupFormatter(Sequence sequence) {
