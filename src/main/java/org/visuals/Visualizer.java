@@ -145,9 +145,9 @@ public class Visualizer extends JPanel {
             @Override
             public void keyPressed(KeyEvent e) {
                 // Check for Escape key press
-                if (e.getKeyCode() == KeyEvent.VK_ESCAPE) {
-                    System.exit(0);  // Exit the program
-                }
+//                if (e.getKeyCode() == KeyEvent.VK_ESCAPE) {
+//                    System.exit(0);  // Exit the program
+//                }
             }
 
             @Override
