@@ -10,4 +10,4 @@ The overall program relies mainly on the `javax.sound.midi` package, allowing fo
 ___
 In the `resources/` folder are a few MIDI files I use for testing, along with the image of a drum kit, on top of which the main animation is played (*and a few other drum images currently left unused*).
 <br>
-In `java/org` holds three other packages, as well as the `Main.java` from which the program should be started. The `midireading` package contains the `MIDIFormatter`, `TrackSettings`, and `MidiInfo` classes, the last of which only used for testing. `MIDIFormatter` is a singleton object which, given a
+In `java/org` holds three other packages, as well as the `Main.java` from which the program should be started. The `midireading` package contains the `MIDIFormatter`, `TrackSettings`, and `MidiInfo` classes, the last of which only used for testing. `MIDIFormatter` is a singleton object which, given a  for reference, can take various data taken from
