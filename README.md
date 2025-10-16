@@ -20,4 +20,9 @@ The `visuals` package contains three classes. `Vec3` is a simple class that hold
 ### Main.java
 As of submitting, the `Main.java` file just runs the `Visualizer` main method. In the future, I may allow for more interaction, such as some opening screen, choosing from a song list, slowing/speeding the song by a given factor, etc.
 
-[//]: # (TODO i really need to go over the actual development)
+## Next Steps
+This project is incredibly messy, but helped reinforce my Java programming skills as well as my ability to read & use external libraries.
+Some potential future improvements could be:
+- An actual UI for selecting a song
+- Changing the speed and pausing/resuming
+- More realistic stick usage (e.g. both sticks on the snare during a roll)
